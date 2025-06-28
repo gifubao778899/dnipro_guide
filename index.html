@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chosen Palette: Calm Harmony (Warm Neutrals with Muted Blue and Amber Accents) -->
     <!-- Application Structure Plan: A task-oriented, single-page application with top navigation (Threat, Map, Safety, Reference) is used instead of a linear report structure. This allows users to quickly access the information most relevant to them (e.g., jump directly to safety actions). The centerpiece is a simulated interactive map, which provides a visual, intuitive understanding of geographic risk, a core concept of the report. The Safety Plan is structured as an interactive checklist to empower users and promote a sense of agency. This design prioritizes user task completion (understanding risk, making a plan) over passive reading. -->
-    <!-- Visualization & Content Choices: 1. Threat Specs: Report Info -> Weapon TTH. Goal -> Inform. Viz -> Interactive cards & Bar/Line charts (Chart.js). Interaction -> Hover/Click for details. Justification -> Makes abstract data tangible and understandable. 2. Risk Geography: Report Info -> Risk zones, target locations. Goal -> Organize/Relate. Viz -> Interactive map (Leaflet.js) with toggleable layers. Interaction -> Layer toggles (zones/targets/shelters), pan/zoom, popups on click. Justification -> Provides real geographic context. Expanded shelter data from official sources for maximum practical value. 3. Safety Protocols: Report Info -> Section 4 actions. Goal -> Guide/Action. Viz -> Accordion & interactive checklist (HTML/CSS/JS). Interaction -> Expand sections, check items. Justification -> Breaks down complex info into actionable steps, fostering user agency. -->
+    <!-- Visualization & Content Choices: 1. Threat Specs: Report Info -> Weapon TTH. Goal -> Inform. Viz -> Interactive cards & Bar/Line charts (Chart.js). Interaction -> Hover/Click for details. Justification -> Makes abstract data tangible and understandable. 2. Risk Geography: Report Info -> Risk zones, target locations. Goal -> Organize/Relate. Viz -> Interactive map (Leaflet.js) with toggleable layers for risks and targets. Interaction -> Layer toggles, pan/zoom, popups. Justification -> Reverted to Leaflet as requested for simplicity and no API key requirement. Focused on core threat visualization by removing shelter data. 3. Safety Protocols: Report Info -> Section 4 actions. Goal -> Guide/Action. Viz -> Accordion & interactive checklist (HTML/CSS/JS). Interaction -> Expand sections, check items. Justification -> Breaks down complex info into actionable steps, fostering user agency. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
@@ -143,14 +143,13 @@
             <div class="text-center mb-12">
                 <span class="text-blue-600 font-semibold" data-lang-key="map_section_title">Розділ 2</span>
                 <h3 class="text-3xl font-bold text-slate-900 mt-2" data-lang-key="map_title">Інтерактивна карта ризиків та укриттів</h3>
-                <p class="max-w-3xl mx-auto text-slate-600 mt-4" data-lang-key="map_text">Використовуйте цю карту для візуалізації зон небезпеки та знаходження найближчих офіційних укриттів. Вивчіть заздалегідь маршрути до кількох укриттів біля вашого будинку, роботи та місць частого перебування.</p>
+                <p class="max-w-3xl mx-auto text-slate-600 mt-4" data-lang-key="map_text_v2">Використовуйте цю карту для візуалізації зон небезпеки та розташування ключових об'єктів інфраструктури. Це допоможе краще зрозуміти потенційні ризики для різних районів міста.</p>
             </div>
             
             <div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-200/80">
                 <div class="flex flex-wrap gap-4 mb-4 justify-center">
                     <button id="toggle-risk-zones" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition" data-lang-key="map_btn_risk">Показати/сховати зони ризику</button>
                     <button id="toggle-targets" class="bg-amber-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-amber-700 transition" data-lang-key="map_btn_targets">Показати/сховати об'єкти</button>
-                    <button id="toggle-shelters" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition" data-lang-key="map_btn_shelters">Показати/сховати укриття</button>
                 </div>
 
                 <div id="leaflet-map" class="w-full z-10"></div>
@@ -158,7 +157,6 @@
                  <div class="flex flex-wrap gap-x-6 gap-y-2 justify-center mt-4 text-sm">
                     <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-red-500/40 mr-2 border border-red-600/50"></span><span data-lang-key="legend_risk_high">Високий ризик</span></div>
                     <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-amber-500/40 mr-2 border border-amber-600/50"></span><span data-lang-key="legend_risk_medium">Середній ризик</span></div>
-                    <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-green-600 mr-2 border border-white/50 shadow-sm"></span><span data-lang-key="legend_shelters">Укриття</span></div>
                     <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-red-600 mr-2 border border-white/50 shadow-sm"></span><span data-lang-key="legend_energy">Енергетика</span></div>
                     <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-purple-600 mr-2 border border-white/50 shadow-sm"></span><span data-lang-key="legend_industry">Промисловість</span></div>
                     <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-cyan-600 mr-2 border border-white/50 shadow-sm"></span><span data-lang-key="legend_logistics">Логістика</span></div>
@@ -243,26 +241,20 @@
             <p class="mt-2 opacity-70" data-lang-key="footer2">Інформація актуальна на момент створення. Завжди дотримуйтесь офіційних вказівок ДСНС та місцевої влади. Бережіть себе.</p>
         </div>
     </footer>
-
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Data and Translations ---
+    let map;
+    let currentLanguage = 'ua';
+    let rangeChart, warheadChart;
+    
     const translations = {
         ua: {
-            // General
-            page_title: "Гід з безпеки: Загроза «Грім-Е1» для Дніпра",
-            header_title: "Гід з безпеки Дніпра",
-            nav_threat: "Огляд загрози",
-            nav_map: "Карта ризиків",
-            nav_plan: "План безпеки",
-            nav_threat_mob: "Огляд загрози",
-            nav_map_mob: "Карта ризиків",
-            nav_plan_mob: "План безпеки",
+            page_title: "Гід з безпеки: Загроза «Грім-Е1» для Дніпра", header_title: "Гід з безпеки Дніпра",
+            nav_threat: "Огляд загрози", nav_map: "Карта ризиків", nav_plan: "План безпеки",
+            nav_threat_mob: "Огляд загрози", nav_map_mob: "Карта ризиків", nav_plan_mob: "План безпеки",
             intro_title: "Аналіз загрози «Грім-Е1» та цивільна оборона",
             intro_text: "Цей інтерактивний гід представляє комплексний аналіз загрози від авіаційного боєприпасу «Грім-Е1» для Дніпра. Його мета — надати мешканцям знання для розуміння ризиків, визначення небезпечних зон та реалізації надійного плану безпеки для себе та своїх родин.",
-            // Threat Section
-            threat_section_title: "Розділ 1",
-            threat_title: "Профіль загрози: Боєприпас «Грім-Е1»",
+            threat_section_title: "Розділ 1", threat_title: "Профіль загрози: Боєприпас «Грім-Е1»",
             threat_text: "Щоб оцінити загрозу, важливо розуміти можливості зброї. «Грім-Е1» — це гібрид високоточної ракети та плануючої бомби, призначений для ураження стаціонарних об'єктів з великої відстані.",
             threat_card1_title: "Дальність до 120 км",
             threat_card1_text: "Дозволяє літаку-носію здійснювати пуск, не входячи в зону дії ППО. Дальність сильно залежить від висоти скидання.",
@@ -270,24 +262,13 @@ document.addEventListener('DOMContentLoaded', () => {
             threat_card2_text: "Потужний осколково-фугасний заряд, призначений для руйнування великих та добре укріплених об'єктів інфраструктури.",
             threat_card3_title: "Супутникове наведення",
             threat_card3_text: "Використовує інерціальну систему та корекцію по ГЛОНАСС/GPS для високої точності по стаціонарних цілях з відомими координатами.",
-            chart1_title: "Залежність дальності від висоти пуску",
-            chart2_title: "Порівняння потужності бойової частини",
-            // Map Section
-            map_section_title: "Розділ 2",
-            map_title: "Інтерактивна карта ризиків та укриттів",
-            map_text: "Використовуйте цю карту для візуалізації зон небезпеки та знаходження найближчих офіційних укриттів. Вивчіть заздалегідь маршрути до кількох укриттів біля вашого будинку, роботи та місць частого перебування.",
-            map_btn_risk: "Показати/сховати зони ризику",
-            map_btn_targets: "Показати/сховати об'єкти",
-            map_btn_shelters: "Показати/сховати укриття",
-            legend_risk_high: "Високий ризик",
-            legend_risk_medium: "Середній ризик",
-            legend_shelters: "Укриття",
-            legend_energy: "Енергетика",
-            legend_industry: "Промисловість",
-            legend_logistics: "Логістика",
-            // Plan Section
-            plan_section_title: "Розділ 3",
-            plan_title: "Ваш план безпеки",
+            chart1_title: "Залежність дальності від висоти пуску", chart2_title: "Порівняння потужності бойової частини",
+            map_section_title: "Розділ 2", map_title: "Інтерактивна карта ризиків та укриттів",
+            map_text_v2: "Використовуйте цю карту для візуалізації зон небезпеки та розташування ключових об'єктів інфраструктури. Це допоможе краще зрозуміти потенційні ризики для різних районів міста.",
+            map_btn_risk: "Показати/сховати зони ризику", map_btn_targets: "Показати/сховати об'єкти",
+            legend_risk_high: "Високий ризик", legend_risk_medium: "Середній ризик",
+            legend_energy: "Енергетика", legend_industry: "Промисловість", legend_logistics: "Логістика",
+            plan_section_title: "Розділ 3", plan_title: "Ваш план безпеки",
             plan_text: "Проактивна підготовка — найефективніший інструмент для зниження ризиків і тривоги. Цей розділ містить практичні кроки для захисту вас і вашої родини.",
             accordion1_title: "🚨 Протокол негайного реагування",
             accordion1_content: `<p><b>Почувши сирену:</b> Негайно прямуйте в укриття. Не чекайте на підтвердження. Візьміть «тривожну валізку».</p><p><b>Якщо ви вдома:</b> Перейдіть у місце, що відповідає «правилу двох стін» (наприклад, коридор). Тримайтеся подалі від вікон. Сядьте на підлогу.</p><p><b>Якщо ви в машині:</b> Зупиніться, вийдіть з машини та відійдіть. Ляжте на землю або знайдіть укриття.</p><p><b>Якщо ви на вулиці:</b> Негайно ляжте на землю, закривши голову руками. Використовуйте будь-яке заглиблення або невисоку огорожу.</p>`,
@@ -301,42 +282,19 @@ document.addEventListener('DOMContentLoaded', () => {
             checklist4: "<b>Їжа та вода:</b> Запас на 3 дні (консерви, батончики, вода з розрахунку 3 л/особу/добу).",
             checklist5: "<b>Інструменти:</b> Мультитул, скотч, робочі рукавички.",
             checklist6: "<b>Одяг та гігієна:</b> Зміна білизни, зручне взуття, мило, серветки.",
-            // Footer
             footer1: "Цей гід створено на основі аналізу відкритих даних для підвищення обізнаності та готовності цивільного населення.",
             footer2: "Інформація актуальна на момент створення. Завжди дотримуйтесь офіційних вказівок ДСНС та місцевої влади. Бережіть себе.",
-            // Chart specific
-            chart1_label: "Дальність, км",
-            chart1_x1: "Низька висота (5 км)",
-            chart1_x2: "Оптимальна висота (12 км)",
-            chart1_y_title: "Дальність (км)",
-            chart2_label: "Маса бойової частини, кг",
-            chart2_y1: "Ракета С-300 (земля)",
-            chart2_y2: "КАБ-500",
-            chart2_y3: "Грім-Е1",
-            chart2_y4: 'Ракета "Іскандер"',
-            chart2_x_title: "Маса (кг)",
-            // Map specific
-            target_type_energy: "Енергетика",
-            target_type_industry: "Промисловість",
-            target_type_logistics: "Логістика",
-            shelter_name: "Укриття",
-            school_name: "Школа"
+            chart1_label: "Дальність, км", chart1_x1: "Низька висота (5 км)", chart1_x2: "Оптимальна висота (12 км)", chart1_y_title: "Дальність (км)",
+            chart2_label: "Маса бойової частини, кг", chart2_y1: "Ракета С-300 (земля)", chart2_y2: "КАБ-500", chart2_y3: "Грім-Е1", chart2_y4: 'Ракета "Іскандер"', chart2_x_title: "Маса (кг)",
+            target_type_energy: "Енергетика", target_type_industry: "Промисловість", target_type_logistics: "Логістика"
         },
         en: {
-            // General
-            page_title: "Safety Guide: 'Grom-E1' Threat for Dnipro",
-            header_title: "Dnipro Safety Guide",
-            nav_threat: "Threat Overview",
-            nav_map: "Risk Map",
-            nav_plan: "Safety Plan",
-            nav_threat_mob: "Threat Overview",
-            nav_map_mob: "Risk Map",
-            nav_plan_mob: "Safety Plan",
+            page_title: "Safety Guide: 'Grom-E1' Threat for Dnipro", header_title: "Dnipro Safety Guide",
+            nav_threat: "Threat Overview", nav_map: "Risk Map", nav_plan: "Safety Plan",
+            nav_threat_mob: "Threat Overview", nav_map_mob: "Risk Map", nav_plan_mob: "Safety Plan",
             intro_title: "Threat Analysis of 'Grom-E1' and Civil Defense",
             intro_text: "This interactive guide provides a comprehensive analysis of the threat from the 'Grom-E1' aerial munition to Dnipro. Its purpose is to provide residents with the knowledge to understand risks, identify danger zones, and implement a reliable safety plan for themselves and their families.",
-            // Threat Section
-            threat_section_title: "Section 1",
-            threat_title: "Threat Profile: 'Grom-E1' Munition",
+            threat_section_title: "Section 1", threat_title: "Threat Profile: 'Grom-E1' Munition",
             threat_text: "To assess the threat, it is important to understand the weapon's capabilities. The 'Grom-E1' is a hybrid of a high-precision missile and a gliding bomb, designed to strike stationary targets from a long distance.",
             threat_card1_title: "Range up to 120 km",
             threat_card1_text: "Allows the carrier aircraft to launch without entering the air defense zone. The range is highly dependent on the drop altitude.",
@@ -344,24 +302,13 @@ document.addEventListener('DOMContentLoaded', () => {
             threat_card2_text: "A powerful high-explosive fragmentation warhead designed to destroy large and well-fortified infrastructure facilities.",
             threat_card3_title: "Satellite Guidance",
             threat_card3_text: "Uses an inertial system and GLONASS/GPS correction for high precision against stationary targets with known coordinates.",
-            chart1_title: "Range Dependence on Launch Altitude",
-            chart2_title: "Warhead Power Comparison",
-            // Map Section
-            map_section_title: "Section 2",
-            map_title: "Interactive Map of Risks and Shelters",
-            map_text: "Use this map to visualize danger zones and find the nearest official shelters. Study routes to several shelters near your home, work, and frequently visited places in advance.",
-            map_btn_risk: "Show/hide risk zones",
-            map_btn_targets: "Show/hide targets",
-            map_btn_shelters: "Show/hide shelters",
-            legend_risk_high: "High Risk",
-            legend_risk_medium: "Medium Risk",
-            legend_shelters: "Shelters",
-            legend_energy: "Energy",
-            legend_industry: "Industry",
-            legend_logistics: "Logistics",
-            // Plan Section
-            plan_section_title: "Section 3",
-            plan_title: "Your Safety Plan",
+            chart1_title: "Range Dependence on Launch Altitude", chart2_title: "Warhead Power Comparison",
+            map_section_title: "Section 2", map_title: "Interactive Map of Risks and Shelters",
+            map_text_v2: "Use this map to visualize danger zones and the locations of key infrastructure. This will help you better understand the potential risks for different areas of the city.",
+            map_btn_risk: "Show/hide risk zones", map_btn_targets: "Show/hide targets",
+            legend_risk_high: "High Risk", legend_risk_medium: "Medium Risk",
+            legend_energy: "Energy", legend_industry: "Industry", legend_logistics: "Logistics",
+            plan_section_title: "Section 3", plan_title: "Your Safety Plan",
             plan_text: "Proactive preparation is the most effective tool for reducing risks and anxiety. This section contains practical steps to protect you and your family.",
             accordion1_title: "🚨 Immediate Response Protocol",
             accordion1_content: `<p><b>Upon hearing the siren:</b> Immediately proceed to a shelter. Do not wait for confirmation. Take your 'emergency kit'.</p><p><b>If you are at home:</b> Move to a location that follows the 'two-wall rule' (e.g., a corridor). Stay away from windows. Sit on the floor.</p><p><b>If you are in a car:</b> Stop, get out of the car, and move away. Lie on the ground or find a shelter.</p><p><b>If you are outside:</b> Immediately lie on the ground, covering your head with your hands. Use any depression or low barrier.</p>`,
@@ -375,26 +322,11 @@ document.addEventListener('DOMContentLoaded', () => {
             checklist4: "<b>Food and water:</b> 3-day supply (canned food, energy bars, water at 3L/person/day).",
             checklist5: "<b>Tools:</b> Multi-tool, duct tape, work gloves.",
             checklist6: "<b>Clothing and hygiene:</b> Change of underwear, comfortable shoes, soap, wipes.",
-            // Footer
             footer1: "This guide was created based on the analysis of open data to increase public awareness and preparedness.",
             footer2: "The information is current at the time of creation. Always follow the official instructions of the State Emergency Service and local authorities. Stay safe.",
-            // Chart specific
-            chart1_label: "Range, km",
-            chart1_x1: "Low altitude (5 km)",
-            chart1_x2: "Optimal altitude (12 km)",
-            chart1_y_title: "Range (km)",
-            chart2_label: "Warhead weight, kg",
-            chart2_y1: "S-300 missile (ground)",
-            chart2_y2: "KAB-500",
-            chart2_y3: "Grom-E1",
-            chart2_y4: '"Iskander" missile',
-            chart2_x_title: "Weight (kg)",
-             // Map specific
-            target_type_energy: "Energy",
-            target_type_industry: "Industry",
-            target_type_logistics: "Logistics",
-            shelter_name: "Shelter",
-            school_name: "School"
+            chart1_label: "Range, km", chart1_x1: "Low altitude (5 km)", chart1_x2: "Optimal altitude (12 km)", chart1_y_title: "Range (km)",
+            chart2_label: "Warhead weight, kg", chart2_y1: "S-300 missile (ground)", chart2_y2: "KAB-500", chart2_y3: "Grom-E1", chart2_y4: '"Iskander" missile', chart2_x_title: "Weight (kg)",
+            target_type_energy: "Energy", target_type_industry: "Industry", target_type_logistics: "Logistics"
         }
     };
     
@@ -406,72 +338,24 @@ document.addEventListener('DOMContentLoaded', () => {
         { lat: 48.483, lon: 35.030, name: 'Амурський міст', type_key: 'target_type_logistics', color: '#0891b2' },
         { lat: 48.491, lon: 34.965, name: 'Кайдацький міст', type_key: 'target_type_logistics', color: '#0891b2' }
     ];
-    const shelters = [
-        // RE-VERIFIED AND CORRECTED COORDINATES
-        { lat: 48.4658, lon: 35.0408, name_key: 'shelter_name', address: 'просп. Дмитра Яворницького, 75 (Міськрада)'},
-        { lat: 48.4818, lon: 35.0113, name_key: 'school_name', address: '№5, вул. Данила Галицького, 54'},
-        { lat: 48.4173, lon: 34.9865, name_key: 'school_name', address: '№124, вул. Будівельників, 22'},
-        { lat: 48.4575, lon: 35.0681, name_key: 'shelter_name', address: 'Лікарня ім. Мечникова, пл. Соборна, 14'},
-        { lat: 48.3884, lon: 35.0451, name_key: 'school_name', address: '№35, вул. Набережна Перемоги, 132'},
-        { lat: 48.4357, lon: 35.1232, name_key: 'shelter_name', address: 'вул. Космонавта Волкова, 6 (Палац культури)'},
-        { lat: 48.5133, lon: 35.0637, name_key: 'school_name', address: '№134, вул. Шолохова, 17'},
-        { lat: 48.4552, lon: 35.0156, name_key: 'shelter_name', address: 'вул. Орловська, 30'},
-        { lat: 48.4681, lon: 34.9525, name_key: 'shelter_name', address: 'Лікарня №4, вул. Ближня, 31'},
-        { lat: 48.4027, lon: 35.1324, name_key: 'school_name', address: '№29, вул. Моторна, 71'},
-        { lat: 48.4653, lon: 35.0468, name_key: 'shelter_name', address: 'вул. Воскресенська, 10'},
-        { lat: 48.4682, lon: 35.0465, name_key: 'shelter_name', address: 'вул. Князя Володимира Великого, 13А'},
-        { lat: 48.4550, lon: 35.0543, name_key: 'shelter_name', address: 'вул. Чернишевського, 11'},
-        { lat: 48.4572, lon: 35.0218, name_key: 'school_name', address: '№2, просп. Лесі Українки, 43'},
-        { lat: 48.4503, lon: 35.0251, name_key: 'shelter_name', address: 'вул. Антоновича, 72'},
-        { lat: 48.4371, lon: 35.0326, name_key: 'school_name', address: '№16, просп. Богдана Хмельницького, 14Б'},
-        { lat: 48.4275, lon: 35.0192, name_key: 'shelter_name', address: 'вул. Макарова, 27А (Стадіон)'},
-        { lat: 48.4983, lon: 34.9996, name_key: 'shelter_name', address: 'вул. Алана Шепарда, 11'},
-        { lat: 48.4891, lon: 34.9754, name_key: 'shelter_name', address: 'вул. Велика Діївська, 4'},
-        { lat: 48.4819, lon: 35.0121, name_key: 'school_name', address: '№94, вул. Данила Галицького, 52'},
-        { lat: 48.5118, lon: 35.0615, name_key: 'school_name', address: '№69, вул. Софії Ковалевської, 88А'},
-        { lat: 48.5113, lon: 35.0842, name_key: 'shelter_name', address: 'просп. Слобожанський, 104'},
-        { lat: 48.4975, lon: 35.0898, name_key: 'school_name', address: '№47, вул. Нестерова, 29'},
-        { lat: 48.3746, lon: 35.0712, name_key: 'shelter_name', address: 'просп. Героїв, 40'},
-        { lat: 48.3971, lon: 35.0504, name_key: 'school_name', address: '№107, бульв. Слави, 8'},
-        { lat: 48.4385, lon: 35.0123, name_key: 'shelter_name', address: 'вул. Новокримська, 8'},
-        { lat: 48.4610, lon: 35.0355, name_key: 'shelter_name', address: 'Парк Глоби, просп. Дмитра Яворницького, 95'},
-        { lat: 48.4536, lon: 35.0454, name_key: 'shelter_name', address: 'вул. Січових Стрільців, 20'},
-        { lat: 48.4680, lon: 35.0520, name_key: 'shelter_name', address: 'вул. Харківська, 8А'},
-        { lat: 48.4691, lon: 35.0531, name_key: 'shelter_name', address: 'вул. Магдебурзького права, 4А'},
-        { lat: 48.4116, lon: 34.9392, name_key: 'school_name', address: '№143, вул. Коробова, 3Д'},
-        { lat: 48.4727, lon: 34.9785, name_key: 'shelter_name', address: 'вул. Київська, 1'},
-        { lat: 48.5063, lon: 35.0991, name_key: 'shelter_name', address: 'вул. Осіння, 15'},
-        { lat: 48.5176, lon: 35.0252, name_key: 'shelter_name', address: 'вул. Каруни, 129'},
-        { lat: 48.4528, lon: 35.1415, name_key: 'school_name', address: '№129, вул. Розсвітна, 1'},
-        { lat: 48.4771, lon: 34.9096, name_key: 'shelter_name', address: 'вул. Моніторна, 7'},
-        { lat: 48.4485, lon: 35.0118, name_key: 'shelter_name', address: 'вул. Робоча, 75'},
-        { lat: 48.4019, lon: 35.0371, name_key: 'shelter_name', address: 'Запорізьке шосе, 68'},
-        { lat: 48.4481, lon: 35.0933, name_key: 'shelter_name', address: 'вул. Телевізійна, 3'},
-        { lat: 48.4052, lon: 35.0837, name_key: 'school_name', address: '№76, вул. Космодромна, 7'},
-        { lat: 48.4907, lon: 35.1093, name_key: 'shelter_name', address: 'вул. Калинова, 83'},
-        { lat: 48.4601, lon: 35.0495, name_key: 'shelter_name', address: 'вул. Троїцька, 21А'},
-        { lat: 48.3813, lon: 34.9995, name_key: 'school_name', address: '№111, вул. Космонавтів, 10'},
-    ];
 
-    let currentLanguage = 'ua';
-    let rangeChart, warheadChart, map;
-    let targetMarkers, shelterMarkers, riskZonesLayer;
+    let targetMarkers = [];
+    let riskZonesLayer = [];
 
     function updateTextContent(lang) {
+        currentLanguage = lang;
         document.documentElement.lang = lang;
         document.title = translations[lang].page_title;
         document.querySelectorAll('[data-lang-key]').forEach(element => {
             const key = element.getAttribute('data-lang-key');
             if (translations[lang][key]) {
-                if (key.startsWith('accordion') && key.endsWith('content')) {
+                 if (key.startsWith('accordion') && key.endsWith('content')) {
                     element.innerHTML = translations[lang][key];
                 } else {
                      element.innerHTML = translations[lang][key];
                 }
             }
         });
-        
-        // Update language buttons state
         document.getElementById('lang-ua').classList.toggle('active', lang === 'ua');
         document.getElementById('lang-en').classList.toggle('active', lang === 'en');
     }
@@ -479,20 +363,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function createCharts(lang) {
         if (rangeChart) rangeChart.destroy();
         if (warheadChart) warheadChart.destroy();
-
         const t = translations[lang];
         const commonOptions = {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', titleColor: '#f1f5f9', bodyColor: '#f1f5f9', padding: 10, cornerRadius: 4 } },
             scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } }, x: { grid: { display: false }, ticks: { color: '#64748b' } } }
         };
-
         rangeChart = new Chart(document.getElementById('rangeChart').getContext('2d'), {
             type: 'bar',
             data: { labels: [t.chart1_x1, t.chart1_x2], datasets: [{ label: t.chart1_label, data: [35, 120], backgroundColor: ['#fbbf24', '#3b82f6'], borderWidth: 1, borderRadius: 4 }] },
             options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { display: true, text: t.chart1_y_title, color: '#475569' } } } }
         });
-
         warheadChart = new Chart(document.getElementById('warheadChart').getContext('2d'), {
             type: 'bar',
             data: { labels: [t.chart2_y1, t.chart2_y2, t.chart2_y3, t.chart2_y4], datasets: [{ label: t.chart2_label, data: [150, 380, 315, 480], backgroundColor: ['#a5b4fc', '#fca5a5', '#67e8f9', '#fdba74'], borderWidth: 1, borderRadius: 4 }] },
@@ -500,11 +381,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function createMap(lang) {
-        const t = translations[lang];
-        if (map) {
-            map.remove();
-        }
+    function createMap() {
+        if (map) return;
         
         const dniproCoords = [48.4647, 35.0462];
         map = L.map('leaflet-map').setView(dniproCoords, 11);
@@ -516,58 +394,51 @@ document.addEventListener('DOMContentLoaded', () => {
         targetMarkers = L.layerGroup();
         targets.forEach(target => {
             const icon = L.divIcon({ html: `<div style="background-color: ${target.color};" class="w-4 h-4 custom-div-icon"></div>`, className: '', iconSize: [16, 16], iconAnchor: [8, 8] });
-            L.marker([target.lat, target.lon], { icon: icon }).bindPopup(`<b>${target.name}</b><br>${t[target.type_key]}`).addTo(targetMarkers);
+            const marker = L.marker([target.lat, target.lon], { icon: icon });
+            targetMarkers.addLayer(marker);
         });
 
-        shelterMarkers = L.layerGroup();
-        const shelterIcon = L.divIcon({ html: `<div style="background-color: #16a34a;" class="w-3.5 h-3.5 custom-div-icon"></div>`, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
-        shelters.forEach(shelter => {
-            L.marker([shelter.lat, shelter.lon], { icon: shelterIcon }).bindPopup(`<b>${t[shelter.name_key] || shelter.name_key}</b><br>${shelter.address}`).addTo(shelterMarkers);
-        });
-        
-        highRiskZone = L.polygon([[48.55, 35.10], [48.35, 35.28], [48.30, 35.05], [48.45, 34.95]], { color: '#ef4444', weight: 1, fillColor: '#ef4444', fillOpacity: 0.2 });
-        mediumRiskZone = L.polygon([[48.55, 34.90], [48.55, 35.10], [48.45, 34.95], [48.40, 34.85]], { color: '#f59e0b', weight: 1, fillColor: '#f59e0b', fillOpacity: 0.2 });
+        const highRiskZone = L.polygon([[48.55, 35.10], [48.35, 35.28], [48.30, 35.05], [48.45, 34.95]], { color: '#ef4444', weight: 1, fillColor: '#ef4444', fillOpacity: 0.2 });
+        const mediumRiskZone = L.polygon([[48.55, 34.90], [48.55, 35.10], [48.45, 34.95], [48.40, 34.85]], { color: '#f59e0b', weight: 1, fillColor: '#f59e0b', fillOpacity: 0.2 });
         riskZonesLayer = L.layerGroup([highRiskZone, mediumRiskZone]);
 
         riskZonesLayer.addTo(map);
         targetMarkers.addTo(map);
-        shelterMarkers.addTo(map);
+        updatePopups();
     }
     
-    function switchLanguage(lang) {
-        currentLanguage = lang;
-        updateTextContent(lang);
-        createCharts(lang);
-        // We re-bind popups instead of re-creating the whole map for better performance
+    function updatePopups() {
+        if (!targetMarkers) return;
+        const t = translations[currentLanguage];
         targetMarkers.eachLayer((layer, i) => {
-             const targetData = targets[Object.keys(targets)[i]];
-             layer.bindPopup(`<b>${targetData.name}</b><br>${translations[lang][targetData.type_key]}`);
-        });
-        shelterMarkers.eachLayer((layer, i) => {
-             const shelterData = shelters[Object.keys(shelters)[i]];
-             layer.bindPopup(`<b>${translations[lang][shelterData.name_key]}</b><br>${shelterData.address}`);
+            const targetData = targets[i];
+            if (targetData) {
+                layer.bindPopup(`<b>${targetData.name}</b><br>${t[targetData.type_key]}`);
+            }
         });
     }
 
-    // --- Event Listeners ---
+    function switchLanguage(lang) {
+        updateTextContent(lang);
+        createCharts(lang);
+        updatePopups();
+    }
+    
+    document.getElementById('toggle-risk-zones').addEventListener('click', () => {
+        if (map.hasLayer(riskZonesLayer)) { map.removeLayer(riskZonesLayer); } else { map.addLayer(riskZonesLayer); }
+    });
+    document.getElementById('toggle-targets').addEventListener('click', () => {
+        if (map.hasLayer(targetMarkers)) { map.removeLayer(targetMarkers); } else { map.addLayer(targetMarkers); }
+    });
+    
     document.getElementById('lang-ua').addEventListener('click', () => switchLanguage('ua'));
     document.getElementById('lang-en').addEventListener('click', () => switchLanguage('en'));
-    
+
     const mobileMenuButton = document.getElementById('mobile-menu-button');
     const mobileMenu = document.getElementById('mobile-menu');
     mobileMenuButton.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
     document.querySelectorAll('#mobile-menu a').forEach(link => {
         link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
-    });
-    
-    document.getElementById('toggle-risk-zones').addEventListener('click', () => {
-        if(map.hasLayer(riskZonesLayer)) map.removeLayer(riskZonesLayer); else map.addLayer(riskZonesLayer);
-    });
-    document.getElementById('toggle-targets').addEventListener('click', () => {
-        if(map.hasLayer(targetMarkers)) map.removeLayer(targetMarkers); else map.addLayer(targetMarkers);
-    });
-    document.getElementById('toggle-shelters').addEventListener('click', () => {
-        if(map.hasLayer(shelterMarkers)) map.removeLayer(shelterMarkers); else map.addLayer(shelterMarkers);
     });
 
     const accordionItems = document.querySelectorAll('.accordion-item');
@@ -591,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initial Load ---
     updateTextContent(currentLanguage);
     createCharts(currentLanguage);
-    createMap(currentLanguage);
+    createMap();
 });
 </script>
 </body>
